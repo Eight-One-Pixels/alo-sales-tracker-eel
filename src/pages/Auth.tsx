@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Eye, EyeOff, Building2 } from "lucide-react";
+import { Eye, EyeOff, Building2, Mail, KeyRound, X } from "lucide-react";
 import icon from '@/assets/icon.png';
 
 const Auth = () => {
@@ -17,6 +16,10 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showAuthOptions, setShowAuthOptions] = useState(false);
+  const [failedEmail, setFailedEmail] = useState("");
+  const [sendingMagicLink, setSendingMagicLink] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -33,6 +36,7 @@ const Auth = () => {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setShowAuthOptions(false);
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -40,7 +44,20 @@ const Auth = () => {
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        // For any authentication error, offer alternative login methods
+        if (error.message.includes("Invalid login credentials") || 
+            error.message.includes("invalid password") ||
+            error.message.includes("wrong password") ||
+            error.message.includes("Email not confirmed")) {
+          
+          setFailedEmail(email);
+          setShowAuthOptions(true);
+          toast.error("Login failed. Choose an alternative method below:");
+          return;
+        }
+        throw error;
+      }
 
       if (data.user) {
         toast.success("Successfully signed in!");
@@ -50,6 +67,50 @@ const Auth = () => {
       toast.error(error.message || "Failed to sign in");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSendMagicLink = async () => {
+    setSendingMagicLink(true);
+    
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: failedEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success("Magic link sent! Please check your email and click the link to sign in.");
+      setShowAuthOptions(false);
+      setPassword(""); // Clear password field
+    } catch (error: any) {
+      toast.error(error.message || "Failed to send magic link");
+    } finally {
+      setSendingMagicLink(false);
+    }
+  };
+
+  const handleSendPasswordReset = async () => {
+    setSendingReset(true);
+    
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        failedEmail,
+        { redirectTo: `${window.location.origin}/auth` }
+      );
+
+      if (error) throw error;
+
+      toast.success("Password reset link sent! Check your email to reset your password.");
+      setShowAuthOptions(false);
+      setPassword(""); // Clear password field
+    } catch (error: any) {
+      toast.error(error.message || "Failed to send password reset link");
+    } finally {
+      setSendingReset(false);
     }
   };
 
@@ -149,6 +210,65 @@ const Auth = () => {
                   {loading ? "Signing in..." : "Sign In"}
                 </Button>
               </form>
+
+              {showAuthOptions && (
+                <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium text-blue-800">Alternative Login Methods</h3>
+                    <Button
+                      onClick={() => setShowAuthOptions(false)}
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-blue-600 hover:bg-blue-100"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-blue-600 mb-4">
+                    Choose how you'd like to access your account: <strong>{failedEmail}</strong>
+                  </p>
+                  
+                  <div className="space-y-3">
+                    {/* Magic Link Option */}
+                    <div className="p-3 bg-white rounded-md border border-blue-100">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Mail className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm font-medium text-blue-800">Magic Login Link</span>
+                      </div>
+                      <p className="text-xs text-gray-600 mb-3">
+                        Get a secure login link sent to your email. No password needed!
+                      </p>
+                      <Button
+                        onClick={handleSendMagicLink}
+                        disabled={sendingMagicLink}
+                        className="w-full bg-blue-600 hover:bg-blue-700"
+                        size="sm"
+                      >
+                        {sendingMagicLink ? "Sending Magic Link..." : "Send Magic Link"}
+                      </Button>
+                    </div>
+
+                    {/* Password Reset Option */}
+                    <div className="p-3 bg-white rounded-md border border-blue-100">
+                      <div className="flex items-center gap-2 mb-2">
+                        <KeyRound className="h-4 w-4 text-indigo-600" />
+                        <span className="text-sm font-medium text-indigo-800">Reset Password</span>
+                      </div>
+                      <p className="text-xs text-gray-600 mb-3">
+                        Get a link to create a new password for your account.
+                      </p>
+                      <Button
+                        onClick={handleSendPasswordReset}
+                        disabled={sendingReset}
+                        className="w-full bg-indigo-600 hover:bg-indigo-700"
+                        size="sm"
+                      >
+                        {sendingReset ? "Sending Reset Link..." : "Send Password Reset"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="signup" className="space-y-4 mt-6">
