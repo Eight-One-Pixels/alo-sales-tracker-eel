@@ -10,7 +10,7 @@ interface PageHeaderProps {
 
 export const PageHeader = ({ title, description, children, className }: PageHeaderProps) => {
   return (
-    <div className={cn("border-b bg-white/50 backdrop-blur-sm sticky top-0 z-40", className)}>
+    <div className={cn("border-b bg-white/50 backdrop-blur-sm z-40", className)}>
       <div className="px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
