@@ -253,25 +253,25 @@ export const AdminDashboard = () => {
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Organization Overview</h2>
           <p className="text-gray-600">Monitor organization-wide performance and manage system settings</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 justify-center sm:justify-end">
           <Button 
             onClick={() => setCurrentView('approval-center')} 
             variant="outline" 
-            className="text-blue-600 border-blue-600 hover:bg-blue-50"
+            className="text-blue-600 border-blue-600 hover:bg-blue-50 flex items-center gap-2"
           >
-            <Target className="h-4 w-4 mr-2" />
-            Approval Center
+            <Target className="h-4 w-4" />
+            <span className="hidden sm:inline">Approval Center</span>
           </Button>
           <Link to="/clients">
-            <Button variant="outline">
-              <Users className="h-4 w-4 mr-2" />
-              View Clients
+            <Button variant="outline" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">View Clients</span>
             </Button>
           </Link>
           <Link to="/manage-users">
-            <Button className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600">
-              <UserPlus className="h-4 w-4 mr-2" />
-              Manage Users
+            <Button className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 flex items-center gap-2">
+              <UserPlus className="h-4 w-4" />
+              <span className="hidden sm:inline">Manage Users</span>
             </Button>
           </Link>
         </div>

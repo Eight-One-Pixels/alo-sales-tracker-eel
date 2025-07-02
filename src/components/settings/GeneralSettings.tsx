@@ -43,7 +43,11 @@ export const GeneralSettings = () => {
       if (data?.default_commission_rate !== undefined && data?.default_commission_rate !== null) {
         setDefaultCommissionRate(String(data.default_commission_rate));
       }
-      if (data?.preferred_currency) setCurrency(data.preferred_currency);
+      if (data?.preferred_currency) {
+        setCurrency(data.preferred_currency);
+      } else {
+        setCurrency("USD");
+      }
     }
   });
 
@@ -94,6 +98,7 @@ export const GeneralSettings = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="dark:bg-slate-800 dark:border-slate-700">
+                <SelectItem value="MWK">MWK - Malawian Kwacha</SelectItem>
                 <SelectItem value="USD">USD - US Dollar</SelectItem>
                 <SelectItem value="EUR">EUR - Euro</SelectItem>
                 <SelectItem value="GBP">GBP - British Pound</SelectItem>
