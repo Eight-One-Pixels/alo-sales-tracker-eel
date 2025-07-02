@@ -18,7 +18,7 @@ export const GeneralSettings = () => {
   const { theme, setTheme } = useTheme();
   const queryClient = useQueryClient();
   
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState("MWK");
   const [dateFormat, setDateFormat] = useState("MM/DD/YYYY");
   const [timeFormat, setTimeFormat] = useState("12");
   const [language, setLanguage] = useState("en");
