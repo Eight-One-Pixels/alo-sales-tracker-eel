@@ -71,13 +71,14 @@ export const ConvertLeadForm = ({
     validationSchema
   );
 
-  // Fetch deduction settings (global or for this user/team)
+  // Fetch deduction settings (for display purposes)
   const { data: deductionSettings, isLoading: deductionsLoading } = useReactQuery({
     queryKey: ['deduction-settings'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('deductions')
-        .select('*'); // fetch all deductions as array
+        .select('*')
+        .eq('is_active', true); // Only fetch active deductions
       if (error) throw error;
       return data;
     },
@@ -86,21 +87,20 @@ export const ConvertLeadForm = ({
 
   // Fetch commission calculation when revenue or rate changes
   const { data: calculationResult, refetch: recalculate } = useReactQuery({
-    queryKey: ['commission-calculation', values.revenueAmount, values.commissionRate, deductionSettings],
+    queryKey: ['commission-calculation', values.revenueAmount, values.commissionRate],
     queryFn: async () => {
       if (!values.revenueAmount || !values.commissionRate || !Number.isFinite(parseFloat(values.revenueAmount)) || !Number.isFinite(parseFloat(values.commissionRate))) return null;
-      // Pass deduction settings if your RPC supports it, else just display
+      
       const { data, error } = await supabase
         .rpc('calculate_commission_with_deductions', {
           revenue_amount: parseFloat(values.revenueAmount),
           commission_rate: parseFloat(values.commissionRate),
-          currency: leadData?.currency || 'USD',
-          deduction_settings: deductionSettings ?? null
+          currency: leadData?.currency || 'USD'
         });
       if (error) throw error;
       return data?.[0] || null;
     },
-    enabled: !!values.revenueAmount && !!values.commissionRate && Number.isFinite(parseFloat(values.revenueAmount)) && Number.isFinite(parseFloat(values.commissionRate)) && parseFloat(values.revenueAmount) > 0 && !!deductionSettings
+    enabled: !!values.revenueAmount && !!values.commissionRate && Number.isFinite(parseFloat(values.revenueAmount)) && Number.isFinite(parseFloat(values.commissionRate)) && parseFloat(values.revenueAmount) > 0
   });
 
   // Fetch user's default commission rate

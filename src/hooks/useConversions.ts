@@ -85,6 +85,10 @@ export const useConversionActions = () => {
     mutationFn: async (conversionData: any) => {
       if (!user) throw new Error('User not authenticated');
       
+      // Check if commission rate is zero - if so, auto-approve
+      const commissionRate = Number(conversionData.commission_rate) || 0;
+      const isZeroCommission = commissionRate === 0;
+      
       const { error } = await supabase
         .from('conversions')
         .insert({
@@ -92,17 +96,25 @@ export const useConversionActions = () => {
           rep_id: user.id,
           submitted_by: user.id,
           submitted_at: new Date().toISOString(),
-          status: 'pending'
+          status: isZeroCommission ? 'approved' : 'pending',
+          // If auto-approved, set approval fields
+          ...(isZeroCommission && {
+            approved_by: user.id,
+            approved_at: new Date().toISOString(),
+            workflow_notes: 'Auto-approved: Zero commission conversion'
+          })
         });
       
       if (error) throw error;
       
-      // Send toast notification for successful submission
-      showSuccessToast("Conversion submitted for approval!");
-      
-      // Here you would normally trigger notifications to managers/directors
-      // Since you're using toast notifications, we'll show success message
-      toast.success("Managers and directors have been notified of your submission");
+      // Send appropriate toast notification
+      if (isZeroCommission) {
+        showSuccessToast("Conversion auto-approved (zero commission)!");
+        toast.success("No approval needed for zero commission conversions");
+      } else {
+        showSuccessToast("Conversion submitted for approval!");
+        toast.success("Managers and directors have been notified of your submission");
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conversions-workflow'] });
@@ -223,19 +235,24 @@ export const useConversionActions = () => {
     }) => {
       if (!user) throw new Error('User not authenticated');
       
+      // Check if the new commission rate is zero - if so, auto-approve
+      const isZeroCommission = newCommissionRate === 0;
+      
       const { error } = await supabase
         .from('conversions')
         .update({
           commission_rate: newCommissionRate,
           commission_amount: newCommissionAmount,
           commissionable_amount: newCommissionableAmount,
-          status: 'pending', // Reset to pending for new approval process
-          workflow_notes: notes,
+          status: isZeroCommission ? 'approved' : 'pending',
+          workflow_notes: isZeroCommission 
+            ? `${notes ? notes + ' - ' : ''}Auto-approved: Zero commission conversion`
+            : notes,
           // Clear previous approval data
           recommended_by: null,
           recommended_at: null,
-          approved_by: null,
-          approved_at: null,
+          approved_by: isZeroCommission ? user.id : null,
+          approved_at: isZeroCommission ? new Date().toISOString() : null,
           rejection_reason: null,
           // Track who amended it
           submitted_by: user.id,
@@ -245,8 +262,13 @@ export const useConversionActions = () => {
       
       if (error) throw error;
       
-      showSuccessToast("Conversion amended and resubmitted for approval!");
-      toast.success("The approval process will now start over with the new commission details");
+      if (isZeroCommission) {
+        showSuccessToast("Conversion amended and auto-approved (zero commission)!");
+        toast.success("No approval needed for zero commission conversions");
+      } else {
+        showSuccessToast("Conversion amended and resubmitted for approval!");
+        toast.success("The approval process will now start over with the new commission details");
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conversions-workflow'] });

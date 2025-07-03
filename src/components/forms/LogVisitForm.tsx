@@ -110,6 +110,31 @@ export const LogVisitForm = ({ open, onOpenChange, initialValues }: LogVisitForm
 
       if (error) throw error;
 
+      // Always create/update client record when visiting a company (unless client was selected from existing)
+      let clientResult = null;
+      if (companyName && !selectedClient) {
+        const clientData = {
+          created_by: user.id,
+          company_name: companyName,
+          contact_person: contactPerson || null,
+          email: contactEmail || null,
+          phone: '', // Will need to be filled later
+          address: '', // Will need to be filled later
+          industry: '', // Will need to be filled later
+          notes: `Visited on ${format(visitDateTime, 'yyyy-MM-dd')}. Visit notes: ${notes || 'No additional notes'}`
+        };
+
+        clientResult = await createClientSafely(clientData, {
+          returnExistingIfDuplicate: true, // Return existing client if duplicate found
+          updateIfExists: contactPerson || contactEmail ? true : false // Update if we have new contact info
+        });
+
+        if (!clientResult.success && !clientResult.isDuplicate) {
+          console.warn('Failed to create/update client:', clientResult.error);
+          toast.warning("Visit saved but failed to create/update client record");
+        }
+      }
+
       // If lead was generated, create a lead entry
       if (leadGenerated && companyName && contactPerson) {
         const leadData = {
@@ -123,36 +148,14 @@ export const LogVisitForm = ({ open, onOpenChange, initialValues }: LogVisitForm
           notes: `Generated from visit on ${format(visitDateTime, 'yyyy-MM-dd')}. Original notes: ${notes}`
         };
 
-        const clientData = {
-          created_by: user.id,
-          company_name: companyName,
-          contact_person: contactPerson || null,
-          email: contactEmail || null,
-          phone: '', // Will need to be filled later
-          address: '', // Will need to be filled later
-          industry: '', // Will need to be filled later
-          notes: `Lead generated from visit on ${format(visitDateTime, 'yyyy-MM-dd')}. Original notes: ${notes}`
-        };
-
         const { error: leadError } = await supabase
           .from('leads')
           .insert(leadData);
 
-        // Use safe client creation with duplicate checking
-        const clientResult = await createClientSafely(clientData, {
-          returnExistingIfDuplicate: true // Return existing client if duplicate found
-        });
-
+        // Client was already created above, so we only need to handle lead creation errors
         if (leadError) {
           console.warn('Failed to create lead:', leadError);
-          toast.warning("Visit saved but failed to create lead automatically");
-        }
-
-        if (!clientResult.success && !clientResult.isDuplicate) {
-          console.warn('Failed to create client:', clientResult.error);
-          toast.warning("Visit saved but failed to create client automatically");
-        } else if (clientResult.isDuplicate) {
-          console.log('Client already exists, using existing client');
+          toast.warning("Visit and client saved but failed to create lead automatically");
         }
       }
 
@@ -205,7 +208,7 @@ export const LogVisitForm = ({ open, onOpenChange, initialValues }: LogVisitForm
       }
 
       const successMessage = leadGenerated 
-        ? `${isScheduled ? "Visit scheduled" : "Visit logged"} and lead/client created successfully!`
+        ? `${isScheduled ? "Visit scheduled" : "Visit logged"} and lead created successfully!`
         : `${isScheduled ? "Visit scheduled" : "Visit logged"} successfully!`;
       
       toast.success(successMessage);
@@ -339,7 +342,7 @@ export const LogVisitForm = ({ open, onOpenChange, initialValues }: LogVisitForm
                   <SelectItem value="cold_call">Cold Call</SelectItem>
                   <SelectItem value="follow_up">Follow Up</SelectItem>
                   <SelectItem value="presentation">Presentation</SelectItem>
-                  <SelectItem value="meeting">Meeting</SelectItem>
+                  <SelectItem value="meeting">Physical Meeting</SelectItem>
                   <SelectItem value="phone_call">Phone Call</SelectItem>
                 </SelectContent>
               </Select>
@@ -393,6 +396,11 @@ export const LogVisitForm = ({ open, onOpenChange, initialValues }: LogVisitForm
               <Label htmlFor="leadGenerated" className="font-medium">
                 {isScheduled ? "Expect to generate lead from this visit" : "Lead generated from this visit"}
               </Label>
+            </div>
+            
+            {/* Info about client creation */}
+            <div className="text-sm text-blue-700 bg-blue-100 p-2 rounded">
+              <strong>Info:</strong> A client record will be automatically created or updated for this company.
             </div>
             
             {leadGenerated && (

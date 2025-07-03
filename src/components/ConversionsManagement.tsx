@@ -58,6 +58,11 @@ const ConversionItem = ({ conversion, userRole, onAction }: ConversionItemProps)
 
   const getApprovalStatusBadge = () => {
     if (conversion.status === "approved") {
+      // Check if it's an auto-approved conversion (zero commission)
+      const isAutoApproved = conversion.workflow_notes?.includes('Auto-approved: Zero commission');
+      if (isAutoApproved) {
+        return <Badge className="bg-blue-100 text-blue-800 ml-2">🤖 Auto-Approved (Zero Commission)</Badge>;
+      }
       return <Badge className="bg-green-100 text-green-800 ml-2">✅ Approved</Badge>;
     } else if (conversion.status === "rejected") {
       return <Badge className="bg-red-100 text-red-800 ml-2">❌ Rejected</Badge>;

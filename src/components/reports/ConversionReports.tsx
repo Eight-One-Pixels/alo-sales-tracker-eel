@@ -321,10 +321,26 @@ export const ConversionReports = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge className={`flex items-center gap-1 ${getStatusColor(conversion.status || 'pending')}`}>
-                        {getStatusIcon(conversion.status || 'pending')}
-                        {(conversion.status || 'pending').replace('_', ' ').toUpperCase()}
-                      </Badge>
+                      {(() => {
+                        const isAutoApproved = conversion.status === 'approved' && 
+                          conversion.workflow_notes?.includes('Auto-approved: Zero commission');
+                        
+                        if (isAutoApproved) {
+                          return (
+                            <Badge className="flex items-center gap-1 bg-blue-100 text-blue-800">
+                              {getStatusIcon('approved')}
+                              AUTO-APPROVED
+                            </Badge>
+                          );
+                        }
+                        
+                        return (
+                          <Badge className={`flex items-center gap-1 ${getStatusColor(conversion.status || 'pending')}`}>
+                            {getStatusIcon(conversion.status || 'pending')}
+                            {(conversion.status || 'pending').replace('_', ' ').toUpperCase()}
+                          </Badge>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell>
                       <span className="text-sm text-gray-600">

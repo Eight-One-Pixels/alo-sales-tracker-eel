@@ -66,13 +66,14 @@ export const AmendConversionForm = ({
     validationSchema
   );
 
-  // Fetch deduction settings
+  // Fetch deduction settings (for display purposes)
   const { data: deductionSettings, isLoading: deductionsLoading } = useReactQuery({
     queryKey: ['deduction-settings'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('deductions')
-        .select('*');
+        .select('*')
+        .eq('is_active', true); // Only fetch active deductions
       if (error) throw error;
       return data;
     },
@@ -81,20 +82,20 @@ export const AmendConversionForm = ({
 
   // Fetch commission calculation when revenue or rate changes
   const { data: calculationResult, refetch: recalculate } = useReactQuery({
-    queryKey: ['commission-calculation', values.revenueAmount, values.commissionRate, deductionSettings],
+    queryKey: ['commission-calculation', values.revenueAmount, values.commissionRate],
     queryFn: async () => {
       if (!values.revenueAmount || !values.commissionRate || !Number.isFinite(parseFloat(values.revenueAmount)) || !Number.isFinite(parseFloat(values.commissionRate))) return null;
+      
       const { data, error } = await supabase
         .rpc('calculate_commission_with_deductions', {
           revenue_amount: parseFloat(values.revenueAmount),
           commission_rate: parseFloat(values.commissionRate),
-          currency: conversion?.currency || 'USD',
-          deduction_settings: deductionSettings ?? null
+          currency: conversion?.currency || 'USD'
         });
       if (error) throw error;
       return data?.[0] || null;
     },
-    enabled: !!values.revenueAmount && !!values.commissionRate && Number.isFinite(parseFloat(values.revenueAmount)) && Number.isFinite(parseFloat(values.commissionRate)) && parseFloat(values.revenueAmount) > 0 && !!deductionSettings
+    enabled: !!values.revenueAmount && !!values.commissionRate && Number.isFinite(parseFloat(values.revenueAmount)) && Number.isFinite(parseFloat(values.commissionRate)) && parseFloat(values.revenueAmount) > 0
   });
 
   useEffect(() => {
